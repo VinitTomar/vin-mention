@@ -1,14 +1,18 @@
-import { Component, OnInit, EventEmitter, ViewChild, TemplateRef, ViewContainerRef, QueryList, ContentChildren, AfterContentInit } from '@angular/core';
+import { Component, OnInit, EventEmitter, ViewChild, TemplateRef, ViewContainerRef, QueryList, ContentChildren, AfterContentInit, Input, Inject } from '@angular/core';
 import { NgControl } from '@angular/forms';
 import { OverlayRef, Overlay, GlobalPositionStrategy, OverlayConfig } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
+import { ESCAPE, UP_ARROW, DOWN_ARROW, ENTER } from '@angular/cdk/keycodes';
 
-import { merge, from, Observable } from 'rxjs';
+import { merge } from 'rxjs';
 import { filter } from 'rxjs/operators';
-import { ESCAPE, UP_ARROW } from '@angular/cdk/keycodes';
 
 import { CaretCoordinateService } from '../../services/caret-coordinate.service';
 import { MentionListItemDirective } from '../../directives/mention-list-item.directive';
+import { SelectionCallback } from '../../models/selection-callback.model';
+import { MentionConfig } from '../../models/mention-config.model';
+import { DOCUMENT } from '@angular/common';
+import { CaretInfo } from '../../models/caret-info.model';
 
 @Component({
   selector: 'vin-mention',
@@ -20,9 +24,14 @@ import { MentionListItemDirective } from '../../directives/mention-list-item.dir
 export class MentionContainerComponent implements OnInit, AfterContentInit {
 
   private _triggerChar = '@';
+  private _triggerCharOffset = -1;
   private _ngInputControl: NgControl;
   private _overlayRef: OverlayRef;
+  private _htmlInputElmNode: HTMLElement;
   private _selectionEmitter = new EventEmitter();
+  private _caretInfo: CaretInfo;
+  private _mentionFilteredList: MentionListItemDirective[];
+  private _focusedMentionItemIndex = -1;
 
   get templatePortal() {
     if (!this._templatePortal || this._templatePortal.templateRef !== this.templateRef) {
@@ -31,6 +40,17 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
     return this._templatePortal;
   }
   private _templatePortal: TemplatePortal;
+
+  get filterKeyword(): string {
+    const anchorNodeText = this._caretInfo.anchorNode.nodeValue;
+    const keyword = anchorNodeText.substr(this._triggerCharOffset + 1, anchorNodeText.length);
+    return keyword;
+  }
+
+  @Input('selectionCallback')
+  selCallback: SelectionCallback;
+
+  insertOnSpace = true;
 
   @ViewChild(TemplateRef, { static: true })
   templateRef: TemplateRef<any>;
@@ -41,7 +61,8 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
   constructor(
     private _coordSer: CaretCoordinateService,
     private _overlay: Overlay,
-    private _viewContainerRef: ViewContainerRef
+    private _viewContainerRef: ViewContainerRef,
+    @Inject(DOCUMENT) private _doc: Document
   ) { }
 
   ngOnInit() {
@@ -49,11 +70,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
 
   ngAfterContentInit() {
     this.items.forEach(item => {
-      item.itemSelected.asObservable()
-        .subscribe(item => {
-          console.log(item);
-          this._addValueAfterSelection(item.value);
-        })
+      item.itemSelected.asObservable().subscribe((item: MentionConfig) => this._addValueAfterSelection(item))
     });
   }
 
@@ -67,6 +84,10 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
     }
     this._ngInputControl = control;
     this._ngInputControl.control.valueChanges.subscribe(val => this._setWatcher(val));
+  }
+
+  registerHtmlInputElmNode(node: HTMLElement) {
+    this._htmlInputElmNode = node;
   }
 
   private _setOverlayEventListener() {
@@ -88,51 +109,191 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
     });
   }
 
-  private _openOverlay() {
-    const coord = this._coordSer.getCoordinates();
-    let { x, y, height } = coord;
-    const globalPostion = new GlobalPositionStrategy();
-    globalPostion.top(y + height + 'px');
-    globalPostion.left(x + 'px');
+  private _openOverlay(coordinate: DOMRect) {
+    if (!coordinate)
+      return;
 
     const overlayConfig: OverlayConfig = {
-      positionStrategy: globalPostion,
+      positionStrategy: this._getOverlayPosition(coordinate),
       hasBackdrop: true,
       backdropClass: 'mat-overlay-transparent-backdrop',
     }
 
     this._overlayRef = this._overlay.create(overlayConfig);
-    // const componentPortal = new ComponentPortal(MentionContainerComponent);
-    // const containerInstanceRef = this._overlayRef.attach(componentPortal);
-    // containerInstanceRef.instance.selectionEmitter.subscribe(value => this._addValueAfterSelection(value));
     this._overlayRef.attach(this.templatePortal);
     this._setOverlayEventListener();
   }
 
-  private _addValueAfterSelection(value) {
-    console.log(value);
-    const currentInputValue: string = this._ngInputControl.control.value;
-    const insertValue = `<span contenteditable="false" style="background:green; color: white;">${value}</span>`;
-    const insertionStartIndex = currentInputValue.lastIndexOf(this._triggerChar);
-    const newVal = currentInputValue.substr(0, insertionStartIndex)
-      + insertValue +
-      currentInputValue.substr(insertionStartIndex + 1, currentInputValue.length - 1 - insertionStartIndex);
-    this._ngInputControl.control.setValue(newVal);
+  private _getOverlayPosition(coordinate: DOMRect): GlobalPositionStrategy {
+    if (!coordinate)
+      return;
+
     this._closeOverlay();
+
+    const { x, y, height } = coordinate;
+    const globalPostion = new GlobalPositionStrategy();
+    globalPostion.top(y + height + 'px');
+    globalPostion.left(x + 'px');
+
+    return globalPostion;
+  }
+
+  private _addValueAfterSelection(selectedMentionConfig: MentionConfig) {
+    // this._coordSer.cleanup();
+    if (this._triggerCharOffset < 0 || !this._caretInfo) {
+      return;
+    }
+    const anchorNode: Node = this._caretInfo.anchorNode;
+    const anchorNodeText: string = anchorNode.nodeValue;
+    const tempElm = this._doc.createElement('div');
+    tempElm.innerHTML = this.selCallback(selectedMentionConfig);
+    const insertElm: HTMLElement = tempElm.firstChild as HTMLElement;
+    insertElm.setAttribute('setFocusAfterMe', 'true');
+    const preVal = anchorNodeText.substr(0, this._triggerCharOffset);
+    const postVal = anchorNodeText.substr(this._caretInfo.offset + 1, anchorNodeText.length);
+    const preNode = this._doc.createTextNode(preVal);
+    const postNode = this._doc.createTextNode(postVal);
+    anchorNode.parentNode.replaceChild(preNode, anchorNode);
+    preNode.parentNode.insertBefore(insertElm, preNode.nextSibling);
+    insertElm.parentNode.insertBefore(postNode, insertElm.nextSibling);
+    this._ngInputControl.control.setValue(postNode.parentElement.innerHTML);
+    this._closeOverlay();
+    this._restoreCaretPosition();
+  }
+
+  private _restoreCaretPosition() {
+    const range = this._doc.createRange();
+    const sel = this._doc.getSelection();
+    const elm = this._htmlInputElmNode.querySelector('[setFocusAfterMe="true"]');
+    range.setStartAfter(elm);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    elm.removeAttribute('setFocusAfterMe');
+    this._htmlInputElmNode.focus();
   }
 
   private _closeOverlay() {
     if (this._overlayRef && this._overlayRef.hasAttached()) {
       this._overlayRef.detach();
+      this._cleanUp();
     }
   }
 
+  private _cleanUp() {
+    this._mentionFilteredList = null;
+    this._focusedMentionItemIndex = -1;
+  }
+
   private _setWatcher(val: string) {
-    if (val.charAt(val.length - 1) === this._triggerChar) {
-      this._openOverlay();
+    this._caretInfo = this._coordSer.getInfo(this._htmlInputElmNode);
+    if (!this._caretInfo) {
+      this._closeOverlay();
+      return;
+    }
+
+    const textContent = this._getTextContent(this._caretInfo.anchorNode.nodeValue);
+    this._triggerCharOffset = textContent.lastIndexOf(this._triggerChar);
+
+    if (this._triggerCharOffset > -1) {
+      this._openOverlay(this._caretInfo.coordinate);
+      this._filterMentionItems();
+
+      if (this._mentionFilteredList.length == 0) {
+        this._closeOverlay();
+      } else if (this._mentionFilteredList.length == 1) {
+        if (this.filterKeyword.charCodeAt(this.filterKeyword.length - 1) === 160 && this.insertOnSpace) {
+          this._mentionFilteredList[0].selectItem();
+        }
+      }
+
+      this._setKeyDownEventsAction();
+
     } else {
       this._closeOverlay();
     }
+  }
+
+  private _setKeyDownEventsAction() {
+    this._overlayRef.keydownEvents().pipe(
+      filter(event => {
+        return event.keyCode === UP_ARROW || event.keyCode === DOWN_ARROW || event.keyCode === ENTER;
+      })
+    ).subscribe(keyStrokeEvent => {
+      keyStrokeEvent.preventDefault();
+      switch (keyStrokeEvent.keyCode) {
+        case UP_ARROW:
+          this._focusPrevMenuItem();
+          break;
+        case DOWN_ARROW:
+          this._focusNextMenuItem();
+          break;
+        case ENTER:
+          this._selectFocusedItem();
+          break;
+      }
+    });
+  }
+
+  private _selectFocusedItem() {
+    this._mentionFilteredList[this._focusedMentionItemIndex].selectItem();
+  }
+
+  private _focusNextMenuItem() {
+    const len = this._mentionFilteredList.length;
+    if (len) {
+      ++this._focusedMentionItemIndex;
+      if (this._focusedMentionItemIndex == this._mentionFilteredList.length) {
+        this._focusedMentionItemIndex = 0;
+      }
+      this._updateMentionItemFocus();
+    }
+  }
+
+  private _focusPrevMenuItem() {
+    const len = this._mentionFilteredList.length;
+    if (len) {
+      --this._focusedMentionItemIndex;
+      if (this._focusedMentionItemIndex < 0) {
+        this._focusedMentionItemIndex = this._mentionFilteredList.length - 1;
+      }
+      this._updateMentionItemFocus();
+    }
+  }
+
+  private _updateMentionItemFocus() {
+    this._mentionFilteredList.forEach((item, i) => {
+      if (i == this._focusedMentionItemIndex) {
+        item.focus();
+      } else {
+        item.blur();
+      }
+    })
+  }
+
+  private _filterMentionItems() {
+
+    const filteredList = this.items.map(item => {
+      item.blur();
+      if (item.value.keyword.indexOf(this.filterKeyword.trim()) < 0) {
+        item.hideItem();
+      } else {
+        item.showItem();
+      }
+      return item;
+    })
+      .filter(item => {
+        return !item.isHidden;
+      });
+
+    this._mentionFilteredList = filteredList;
+  }
+
+  private _getTextContent(val: string): string {
+    console.log({ val })
+    const tempElm = this._doc.createElement('div');
+    tempElm.innerHTML = val;
+    return tempElm.innerText;
   }
 
 }

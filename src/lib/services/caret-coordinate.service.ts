@@ -1,18 +1,26 @@
 import { Injectable, Inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { CaretInfo } from '../models/caret-info.model';
 
 @Injectable()
 export class CaretCoordinateService {
-
+  private _markerElm;
   constructor(@Inject(DOCUMENT) private _doc: Document) { }
 
-  getCoordinates(): DOMRect | any {
-    let markerElm = this._doc.createElement('span');
-    let selection = this._doc.getSelection();
-    if (selection.anchorNode) {
-      let range = selection.getRangeAt(0);
+  getInfo(htmlNode: HTMLElement): CaretInfo {
+    const markerElm = this._doc.createElement('span');
+    const selection = this._doc.getSelection();
+    const range = selection.getRangeAt(0);
+    const anchorNode = selection.anchorNode;
+    console.log("fetching caret info", { range, selection });
+    if (selection.anchorNode && htmlNode === range.commonAncestorContainer.parentNode) {
+      const offset = range.startOffset - 1;
       range.insertNode(markerElm);
-      return markerElm.getBoundingClientRect();
+      const boundingClient: DOMRect = markerElm.getBoundingClientRect() as DOMRect;
+      markerElm.remove();
+      return new CaretInfo(boundingClient as DOMRect, offset, anchorNode);
+    } else {
+      return null;
     }
   }
 }
