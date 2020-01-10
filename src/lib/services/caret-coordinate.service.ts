@@ -12,7 +12,6 @@ export class CaretCoordinateService {
     const selection = this._doc.getSelection();
     const range = selection.getRangeAt(0);
     const anchorNode = selection.anchorNode;
-    console.log("fetching caret info", { range, selection });
     if (selection.anchorNode && htmlNode === range.commonAncestorContainer.parentNode) {
       const offset = range.startOffset - 1;
       range.insertNode(markerElm);

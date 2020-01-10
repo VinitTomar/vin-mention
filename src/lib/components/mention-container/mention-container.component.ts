@@ -290,7 +290,6 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
   }
 
   private _getTextContent(val: string): string {
-    console.log({ val })
     const tempElm = this._doc.createElement('div');
     tempElm.innerHTML = val;
     return tempElm.innerText;
