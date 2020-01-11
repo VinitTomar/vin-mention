@@ -43,7 +43,8 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
 
   get filterKeyword(): string {
     const anchorNodeText = this._caretInfo.anchorNode.nodeValue;
-    const keyword = anchorNodeText.substr(this._triggerCharOffset + 1, anchorNodeText.length);
+    const keywordLength = this._caretInfo.offset - (this._triggerCharOffset + 1);
+    const keyword = anchorNodeText.substr(this._triggerCharOffset + 1, keywordLength);
     return keyword;
   }
 
@@ -150,7 +151,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
     const insertElm: HTMLElement = tempElm.firstChild as HTMLElement;
     insertElm.setAttribute('setFocusAfterMe', 'true');
     const preVal = anchorNodeText.substr(0, this._triggerCharOffset);
-    const postVal = anchorNodeText.substr(this._caretInfo.offset + 1, anchorNodeText.length);
+    const postVal = anchorNodeText.substr(this._caretInfo.offset, anchorNodeText.length);
     const preNode = this._doc.createTextNode(preVal);
     const postNode = this._doc.createTextNode(postVal);
     anchorNode.parentNode.replaceChild(preNode, anchorNode);
@@ -186,7 +187,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
   }
 
   private _setWatcher(val: string) {
-    this._caretInfo = this._coordSer.getInfo(this._htmlInputElmNode);
+    this._caretInfo = this._coordSer.getInfo(this._htmlInputElmNode, this._triggerChar);
     if (!this._caretInfo) {
       this._closeOverlay();
       return;
