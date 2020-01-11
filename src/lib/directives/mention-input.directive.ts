@@ -1,4 +1,4 @@
-import { Directive, Self, OnInit, Input, ElementRef } from '@angular/core';
+import { Directive, Self, OnInit, Input, ElementRef, Optional } from '@angular/core';
 import { NgControl } from '@angular/forms';
 import { MentionContainerComponent } from '../components/mention-container/mention-container.component';
 
@@ -16,12 +16,18 @@ export class MentionInputDirective implements OnInit {
   private _mentionListContainer: MentionContainerComponent;
 
   constructor(
-    @Self() private _ngContol: NgControl,
+    @Optional() @Self() private _ngContol: NgControl,
     private _elmRef: ElementRef<HTMLElement>
-  ) { }
+  ) {
+    if (!this._ngContol) {
+      throw ('No control value accessor provided. Please have a look at "https://www.npmjs.com/package/vin-content-editable"');
+    }
+  }
 
   ngOnInit() {
-
+    if (!this._mentionListContainer) {
+      throw 'No vin-mention is provided as input to mentionInput';
+    }
   }
 
 }

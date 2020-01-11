@@ -1,24 +1,56 @@
 # VinMention
 
-This library was generated with [Angular CLI](https://github.com/angular/angular-cli) version 8.2.11.
+## Description
+There are many libraries for mentions or tributes for core javascript imeplementation. But there is no library for angular. For this purpose I have created this library so that developers can use it in their project without any issue.
 
-## Code scaffolding
+## Installation
 
-Run `ng generate component component-name --project vin-mention` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module --project vin-mention`.
-> Note: Don't forget to add `--project vin-mention` or else it will be added to the default project in your `angular.json` file. 
+npm install --save vin-mention.
 
-## Build
+## Usage
 
-Run `ng build vin-mention` to build the project. The build artifacts will be stored in the `dist/` directory.
+1. Use `mentionInput` directive at content editable element. eg:
+```
+<div vinContentEditable="innerHTML" [formControl]="fc" matContentEditableInput [mentionInput]="mymentions" placeholder="content editable"></div>
+```
 
-## Publishing
+2. Provide the mention list menu as the content of the `vin-mention` component. eg:
+```
+<vin-mention #mymentions="vinMention" [selectionCallback]="selCall">
+    <mat-card>
+      <mat-action-list>
+        <button mat-list-item *ngFor="let item of mentionList;" [mentionListItem]="item">
+          {{item.data.value}} </button>
+      </mat-action-list>
+    </mat-card>
+  </vin-mention>
+```
+You can desing the menu how ever you want. Just take care or using `mentionListItem` with an input value of type `MentionListItemConfig`.
 
-After building your library with `ng build vin-mention`, go to the dist folder `cd dist/vin-mention` and run `npm publish`.
+DO NOT FORGET TO PROVIDE selectionCallback AS INPUT TO THE `vin-metion`, WITH THE FOLLWOING SIGNATURE
 
-## Running unit tests
+```
+(selectedItem: MentionListItemConfig) => string;
+```
 
-Run `ng test vin-mention` to execute the unit tests via [Karma](https://karma-runner.github.io).
+## Tips
+1. You can provide extra config to `vin-mention` by using the following structure.
+```
+class MentionConfig {
+  constructor(
+    public triggerChar: string,
+    public filterListItems: boolean,
+    public insertOnSpace: boolean,
+    public selectionCallback: SelectionCallback,
+  ) { }
+}
+```
 
-## Further help
+2. Please use with `vin-content-editable` package for better support. However you can use your own controlvalueaccessor implementation for content editalbe element.
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+## Example
+Here is [demo](https://stackblitz.com/edit/vin-mention-demo).
+
+
+### Please have a look at 
+[vin-content-editable](https://www.npmjs.com/package/vin-content-editable).

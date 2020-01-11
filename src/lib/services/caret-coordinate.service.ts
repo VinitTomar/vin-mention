@@ -4,7 +4,6 @@ import { CaretInfo } from '../models/caret-info.model';
 
 @Injectable()
 export class CaretCoordinateService {
-  private _markerElm;
   constructor(@Inject(DOCUMENT) private _doc: Document) { }
 
   getInfo(htmlNode: HTMLElement): CaretInfo {
