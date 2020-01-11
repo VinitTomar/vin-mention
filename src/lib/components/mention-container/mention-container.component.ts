@@ -78,8 +78,11 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     private _coordSer: CaretCoordinateService,
     private _overlay: Overlay,
     private _viewContainerRef: ViewContainerRef,
-    @Inject(DOCUMENT) private _doc: Document
-  ) { }
+    @Inject(DOCUMENT) _doc: any
+  ) {
+    this._doc = _doc as Document;
+  }
+  private _doc: Document
 
   ngOnInit() {
   }
