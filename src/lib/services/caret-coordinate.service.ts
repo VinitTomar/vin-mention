@@ -4,8 +4,12 @@ import { CaretInfo } from '../models/caret-info.model';
 
 @Injectable()
 export class CaretCoordinateService {
-
-  constructor(@Inject(DOCUMENT) private _doc: Document) { }
+  constructor(
+    @Inject(DOCUMENT) @Inject(DOCUMENT) _doc: any
+  ) {
+    this._doc = _doc as Document;
+  }
+  private _doc: Document
 
   getInfo(htmlNode: HTMLElement, triggerChar: string): CaretInfo {
     const selection = this._doc.getSelection();

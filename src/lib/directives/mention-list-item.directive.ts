@@ -1,5 +1,5 @@
 import { Directive, Input, HostListener, Output, EventEmitter, ElementRef } from '@angular/core';
-import { MentionConfig } from '../models/mention-config.model';
+import { MentionListItemConfig } from '../models/mention-list-item-config.model';
 
 @Directive({
   selector: '[mentionListItem]',
@@ -7,11 +7,11 @@ import { MentionConfig } from '../models/mention-config.model';
 export class MentionListItemDirective {
 
   @Input('mentionListItem')
-  set mentionValue(value: MentionConfig) {
+  set mentionValue(value: MentionListItemConfig) {
     if (value && !this.checkType(value)) {
-      throw ('MentionListItem value should be a type of "MentionConfig".')
+      throw ('MentionListItem value should be a type of "MentionListItemConfig".')
     } else if (!value) {
-      throw ('No value is provide for MentionListItem. Please provide a value of "MentionConfig".');
+      throw ('No value is provide for MentionListItem. Please provide a value of "MentionListItemConfig".');
     } else {
       this._value = value;
     }
@@ -19,7 +19,7 @@ export class MentionListItemDirective {
   get value() {
     return this._value;
   }
-  private _value: MentionConfig;
+  private _value: MentionListItemConfig;
 
   isHidden = false;
 
@@ -56,7 +56,7 @@ export class MentionListItemDirective {
   }
 
   checkType(value: any): boolean {
-    const keys = Object.keys(new MentionConfig('', '', ''));
+    const keys = Object.keys(new MentionListItemConfig('', '', ''));
     return keys.reduce((prev, curr) => {
       return prev && value.hasOwnProperty(curr);
     }, true);

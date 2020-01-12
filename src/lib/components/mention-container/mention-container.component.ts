@@ -1,18 +1,19 @@
-import { Component, OnInit, EventEmitter, ViewChild, TemplateRef, ViewContainerRef, QueryList, ContentChildren, AfterContentInit, Input, Inject } from '@angular/core';
+import { Component, OnInit, EventEmitter, ViewChild, TemplateRef, ViewContainerRef, QueryList, ContentChildren, AfterContentInit, Input, Inject, OnDestroy } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { NgControl } from '@angular/forms';
 import { OverlayRef, Overlay, GlobalPositionStrategy, OverlayConfig } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
-import { ESCAPE, UP_ARROW, DOWN_ARROW, ENTER } from '@angular/cdk/keycodes';
+import { ESCAPE, UP_ARROW, DOWN_ARROW, ENTER, SPACE } from '@angular/cdk/keycodes';
 
-import { merge } from 'rxjs';
+import { merge, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 
 import { CaretCoordinateService } from '../../services/caret-coordinate.service';
 import { MentionListItemDirective } from '../../directives/mention-list-item.directive';
 import { SelectionCallback } from '../../models/selection-callback.model';
-import { MentionConfig } from '../../models/mention-config.model';
-import { DOCUMENT } from '@angular/common';
+import { MentionListItemConfig } from '../../models/mention-list-item-config.model';
 import { CaretInfo } from '../../models/caret-info.model';
+import { MentionConfig } from '../../models/mention-config';
 
 @Component({
   selector: 'vin-mention',
@@ -21,7 +22,7 @@ import { CaretInfo } from '../../models/caret-info.model';
   exportAs: 'vinMention',
   providers: [CaretCoordinateService]
 })
-export class MentionContainerComponent implements OnInit, AfterContentInit {
+export class MentionContainerComponent implements OnInit, AfterContentInit, OnDestroy {
 
   private _triggerChar = '@';
   private _triggerCharOffset = -1;
@@ -32,6 +33,10 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
   private _caretInfo: CaretInfo;
   private _mentionFilteredList: MentionListItemDirective[];
   private _focusedMentionItemIndex = -1;
+  private _insertOnSpace = false;
+  private _filterListItems = false;
+
+  private _allRxjsSubscription: Array<Subscription> = [];
 
   get templatePortal() {
     if (!this._templatePortal || this._templatePortal.templateRef !== this.templateRef) {
@@ -49,9 +54,20 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
   }
 
   @Input('selectionCallback')
-  selCallback: SelectionCallback;
+  private _selectionCallback: SelectionCallback;
 
-  insertOnSpace = true;
+  @Input('config')
+  set mentionConfig(config: MentionConfig) {
+    if (!this._checkConfigType(config)) {
+      throw ('Please provide config of type "MentionConfig".');
+    }
+    this._triggerChar = config.triggerChar;
+    if (!this._selectionCallback)
+      this._selectionCallback = config.selectionCallback;
+    this._insertOnSpace = config.insertOnSpace;
+    this._filterListItems = config.filterListItems;
+  }
+
 
   @ViewChild(TemplateRef, { static: true })
   templateRef: TemplateRef<any>;
@@ -63,15 +79,24 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
     private _coordSer: CaretCoordinateService,
     private _overlay: Overlay,
     private _viewContainerRef: ViewContainerRef,
-    @Inject(DOCUMENT) private _doc: Document
-  ) { }
+    @Inject(DOCUMENT) _doc: any
+  ) {
+    this._doc = _doc as Document;
+  }
+  private _doc: Document
 
   ngOnInit() {
   }
 
+  ngOnDestroy() {
+    this._allRxjsSubscription.forEach(sub => sub.unsubscribe());
+  }
+
   ngAfterContentInit() {
     this.items.forEach(item => {
-      item.itemSelected.asObservable().subscribe((item: MentionConfig) => this._addValueAfterSelection(item))
+      this._allRxjsSubscription.push(
+        item.itemSelected.asObservable().subscribe((item: MentionListItemConfig) => this._addValueAfterSelection(item))
+      )
     });
   }
 
@@ -84,15 +109,23 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
       throw Error('One mention can only be associated with a single input.');
     }
     this._ngInputControl = control;
-    this._ngInputControl.control.valueChanges.subscribe(val => this._setWatcher(val));
+    const subsc = this._ngInputControl.control.valueChanges.subscribe(val => this._setWatcher(val));
+    this._allRxjsSubscription.push(subsc);
   }
 
   registerHtmlInputElmNode(node: HTMLElement) {
     this._htmlInputElmNode = node;
   }
 
+  private _checkConfigType(config: MentionConfig): boolean {
+    const keys = Object.keys(new MentionConfig('', true, true, null));
+    return keys.reduce((prev, curr) => {
+      return prev && config.hasOwnProperty(curr);
+    }, true);
+  }
+
   private _setOverlayEventListener() {
-    merge(
+    const subsc = merge(
       this._overlayRef.backdropClick(),
       this._overlayRef.detachments(),
       this._overlayRef.keydownEvents()
@@ -108,6 +141,8 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
 
       this._closeOverlay();
     });
+
+    this._allRxjsSubscription.push(subsc);
   }
 
   private _openOverlay(coordinate: DOMRect) {
@@ -139,15 +174,14 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
     return globalPostion;
   }
 
-  private _addValueAfterSelection(selectedMentionConfig: MentionConfig) {
-    // this._coordSer.cleanup();
+  private _addValueAfterSelection(selectedMentionListItemConfig: MentionListItemConfig) {
     if (this._triggerCharOffset < 0 || !this._caretInfo) {
       return;
     }
     const anchorNode: Node = this._caretInfo.anchorNode;
     const anchorNodeText: string = anchorNode.nodeValue;
     const tempElm = this._doc.createElement('div');
-    tempElm.innerHTML = this.selCallback(selectedMentionConfig);
+    tempElm.innerHTML = this._selectionCallback(selectedMentionListItemConfig);
     const insertElm: HTMLElement = tempElm.firstChild as HTMLElement;
     insertElm.setAttribute('setFocusAfterMe', 'true');
     const preVal = anchorNodeText.substr(0, this._triggerCharOffset);
@@ -202,10 +236,6 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
 
       if (this._mentionFilteredList.length == 0) {
         this._closeOverlay();
-      } else if (this._mentionFilteredList.length == 1) {
-        if (this.filterKeyword.charCodeAt(this.filterKeyword.length - 1) === 160 && this.insertOnSpace) {
-          this._mentionFilteredList[0].selectItem();
-        }
       }
 
       this._setKeyDownEventsAction();
@@ -216,7 +246,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
   }
 
   private _setKeyDownEventsAction() {
-    this._overlayRef.keydownEvents().pipe(
+    const subsc1 = this._overlayRef.keydownEvents().pipe(
       filter(event => {
         return event.keyCode === UP_ARROW || event.keyCode === DOWN_ARROW || event.keyCode === ENTER;
       })
@@ -234,6 +264,22 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
           break;
       }
     });
+    this._allRxjsSubscription.push(subsc1);
+
+    const subsc2 = this._overlayRef.keydownEvents().pipe(
+      filter(event => {
+        return event.keyCode === SPACE
+      })
+    ).subscribe(keyStrokeEvent => {
+      switch (keyStrokeEvent.keyCode) {
+        case SPACE:
+          if (this._mentionFilteredList.length == 1 && this._insertOnSpace) {
+            this._mentionFilteredList[0].selectItem();
+          }
+          break;
+      }
+    });
+    this._allRxjsSubscription.push(subsc2);
   }
 
   private _selectFocusedItem() {
@@ -273,6 +319,11 @@ export class MentionContainerComponent implements OnInit, AfterContentInit {
   }
 
   private _filterMentionItems() {
+
+    if (!this._filterListItems) {
+      this._mentionFilteredList = this.items.toArray();
+      return;
+    }
 
     const filteredList = this.items.map(item => {
       item.blur();

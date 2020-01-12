@@ -1,3 +1,3 @@
-import { MentionConfig } from './mention-config.model';
+import { MentionListItemConfig } from './mention-list-item-config.model';
 
-export declare type SelectionCallback = (selectedItem: MentionConfig) => string;
+export declare type SelectionCallback = (selectedItem: MentionListItemConfig) => string;

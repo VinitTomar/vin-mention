@@ -1,8 +1,28 @@
 {
   "name": "vin-mention",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "author": {
+    "name": "Vinit Tomar",
+    "email": "vinit.tomar68@gmail.com"
+  },
   "peerDependencies": {
     "@angular/common": "^8.2.11",
     "@angular/core": "^8.2.11"
+  },
+  "keywords": [
+    "angular",
+    "content editable",
+    "content",
+    "editabled",
+    "ng-content-editable",
+    "generic-toggle",
+    "toggle",
+    "ng",
+    "angular"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VinitTomar/vin-mention.git"
   }
 }
