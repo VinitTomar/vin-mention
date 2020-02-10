@@ -109,7 +109,9 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
       throw Error('One mention can only be associated with a single input.');
     }
     this._ngInputControl = control;
-    const subsc = this._ngInputControl.control.valueChanges.subscribe(val => this._setWatcher(val));
+    const subsc = this._ngInputControl.control.valueChanges.subscribe(val => {
+      this._setWatcher(val)
+    });
     this._allRxjsSubscription.push(subsc);
   }
 
@@ -283,7 +285,11 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   }
 
   private _selectFocusedItem() {
-    this._mentionFilteredList[this._focusedMentionItemIndex].selectItem();
+    if (this._focusedMentionItemIndex == -1) {
+      this._mentionFilteredList[0].selectItem();
+    } else {
+      this._mentionFilteredList[this._focusedMentionItemIndex].selectItem();
+    }
   }
 
   private _focusNextMenuItem() {
