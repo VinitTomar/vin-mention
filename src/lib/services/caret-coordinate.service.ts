@@ -12,11 +12,10 @@ export class CaretCoordinateService {
   private _doc: Document
 
   getInfo(htmlNode: HTMLElement, triggerChar: string): CaretInfo {
-    const selection = this._doc.getSelection();
+    let selection = this._doc.getSelection();
+    let anchorNode = selection.anchorNode;
     const range = selection.getRangeAt(0);
-    const anchorNode = selection.anchorNode;
-
-    if (selection.anchorNode && htmlNode === range.commonAncestorContainer.parentNode && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
+    if (htmlNode === range.commonAncestorContainer.parentNode && anchorNode && anchorNode.nodeValue && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
       const triggerCharIndex = anchorNode.nodeValue.lastIndexOf(triggerChar);
       const caretOffset = range.endOffset;
       const markerElm = this._doc.createElement('span');

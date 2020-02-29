@@ -3,7 +3,7 @@ import { DOCUMENT } from '@angular/common';
 import { NgControl } from '@angular/forms';
 import { OverlayRef, Overlay, GlobalPositionStrategy, OverlayConfig } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
-import { ESCAPE, UP_ARROW, DOWN_ARROW, ENTER, SPACE } from '@angular/cdk/keycodes';
+import { ESCAPE, UP_ARROW, DOWN_ARROW, ENTER, SPACE, AT_SIGN } from '@angular/cdk/keycodes';
 
 import { merge, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -35,6 +35,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   private _focusedMentionItemIndex = -1;
   private _insertOnSpace = false;
   private _filterListItems = false;
+  private _menuOpenedProgramatically = false;
 
   private _allRxjsSubscription: Array<Subscription> = [];
 
@@ -117,6 +118,14 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
 
   registerHtmlInputElmNode(node: HTMLElement) {
     this._htmlInputElmNode = node;
+  }
+
+  openMentionMenu() {
+    this._menuOpenedProgramatically = true;
+    this._htmlInputElmNode.focus();
+    let textNode = this._doc.createTextNode(this._triggerChar);
+    this._htmlInputElmNode.appendChild(textNode);
+    this._ngInputControl.control.setValue(this._htmlInputElmNode.innerHTML);
   }
 
   private _checkConfigType(config: MentionConfig): boolean {
@@ -223,6 +232,18 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   }
 
   private _setWatcher(val: string) {
+    if (this._menuOpenedProgramatically) {
+      const elm = this._htmlInputElmNode.lastChild;
+      const triggerCharIndex = elm.nodeValue.indexOf(this._triggerChar) + 1;
+      const range = this._doc.createRange();
+      const sel = this._doc.getSelection();
+      range.setStart(elm, triggerCharIndex);
+      range.collapse();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      this._menuOpenedProgramatically = false;
+    }
+
     this._caretInfo = this._coordSer.getInfo(this._htmlInputElmNode, this._triggerChar);
     if (!this._caretInfo) {
       this._closeOverlay();
