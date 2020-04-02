@@ -36,6 +36,8 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   private _insertOnSpace = false;
   private _filterListItems = false;
   private _menuOpenedProgramatically = false;
+  private _anchorNodeOffset: number = null;
+  private _anchorNodeTestValue: string = null;
 
   private _allRxjsSubscription: Array<Subscription> = [];
 
@@ -122,9 +124,26 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
 
   openMentionMenu() {
     this._menuOpenedProgramatically = true;
-    this._htmlInputElmNode.focus();
-    let textNode = this._doc.createTextNode(this._triggerChar);
-    this._htmlInputElmNode.appendChild(textNode);
+    const selection = this._doc.getSelection();
+
+    if (selection.anchorNode.parentElement === this._htmlInputElmNode) {
+      const textNode = selection.anchorNode;
+      const nodeText = textNode.nodeValue;
+      const offset = selection.anchorOffset;
+      const preText = nodeText.slice(0, offset);
+      const postText = nodeText.slice(offset, nodeText.length);
+      textNode.nodeValue = preText + this._triggerChar + postText;
+
+      this._anchorNodeOffset = offset + 1;
+      this._anchorNodeTestValue = textNode.nodeValue;
+    } else {
+      const textNode = this._doc.createTextNode(this._triggerChar);
+      this._htmlInputElmNode.appendChild(textNode);
+      
+      this._anchorNodeOffset = null;
+      this._anchorNodeTestValue = null;
+    }
+    
     this._ngInputControl.control.setValue(this._htmlInputElmNode.innerHTML);
   }
 
@@ -231,9 +250,20 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     this._focusedMentionItemIndex = -1;
   }
 
+  private _getElmForProgrammaticTigger(): ChildNode {
+    if (this._anchorNodeOffset !== null && this._anchorNodeTestValue !== null) {
+      const childNodes = this._htmlInputElmNode.childNodes;
+      const nodeArr:Array<ChildNode> = Array.prototype.slice.call(childNodes);
+      console.log({ nodeArr });
+      return nodeArr.find(node => node.nodeValue === this._anchorNodeTestValue);
+    }
+
+    return this._htmlInputElmNode.lastChild;
+  }
+
   private _setWatcher(val: string) {
     if (this._menuOpenedProgramatically) {
-      const elm = this._htmlInputElmNode.lastChild;
+      const elm = this._getElmForProgrammaticTigger();
       const triggerCharIndex = elm.nodeValue.indexOf(this._triggerChar) + 1;
       const range = this._doc.createRange();
       const sel = this._doc.getSelection();
