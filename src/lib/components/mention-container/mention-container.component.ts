@@ -126,8 +126,25 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     this._menuOpenedProgramatically = true;
     const selection = this._doc.getSelection();
 
-    if (selection.anchorNode.parentElement === this._htmlInputElmNode) {
-      const textNode = selection.anchorNode;
+    if (selection.anchorNode === this._htmlInputElmNode) {
+      const textNode = this._doc.createTextNode(this._triggerChar);
+
+      if (selection.anchorOffset !== 0) {
+        const childNode = selection.anchorNode.childNodes.item(selection.anchorOffset);
+        if (childNode)
+          childNode.before(textNode);
+        else
+          this._htmlInputElmNode.appendChild(textNode);
+      }
+       else {
+        this._htmlInputElmNode.prepend(textNode);
+      }
+
+      this._anchorNodeTestValue = textNode.wholeText;
+      this._anchorNodeOffset = textNode.nodeValue.indexOf(this._triggerChar) + 1;
+
+    } else if (selection.anchorNode.parentElement === this._htmlInputElmNode) {
+      const textNode = selection.anchorNode.nodeType === Node.TEXT_NODE ? selection.anchorNode : this._doc.createTextNode('');
       const nodeText = textNode.nodeValue;
       const offset = selection.anchorOffset;
       const preText = nodeText.slice(0, offset);
@@ -136,6 +153,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
 
       this._anchorNodeOffset = offset + 1;
       this._anchorNodeTestValue = textNode.nodeValue;
+
     } else {
       const textNode = this._doc.createTextNode(this._triggerChar);
       this._htmlInputElmNode.appendChild(textNode);
@@ -143,7 +161,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
       this._anchorNodeOffset = null;
       this._anchorNodeTestValue = null;
     }
-    
+
     this._ngInputControl.control.setValue(this._htmlInputElmNode.innerHTML);
   }
 
@@ -230,8 +248,16 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     const range = this._doc.createRange();
     const sel = this._doc.getSelection();
     const elm = this._htmlInputElmNode.querySelector('[setFocusAfterMe="true"]');
-    range.setStartAfter(elm);
-    range.collapse(true);
+    const elmNextSibling = elm.nextSibling;
+
+    if (elmNextSibling && elmNextSibling.nodeType === Node.TEXT_NODE) {
+      range.setStart(elmNextSibling, 0);
+      range.collapse(true);
+    } else {
+      range.setStartAfter(elm);
+      range.collapse(true);
+    }
+
     sel.removeAllRanges();
     sel.addRange(range);
     elm.removeAttribute('setFocusAfterMe');
@@ -254,7 +280,6 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     if (this._anchorNodeOffset !== null && this._anchorNodeTestValue !== null) {
       const childNodes = this._htmlInputElmNode.childNodes;
       const nodeArr:Array<ChildNode> = Array.prototype.slice.call(childNodes);
-      console.log({ nodeArr });
       return nodeArr.find(node => node.nodeValue === this._anchorNodeTestValue);
     }
 
@@ -272,6 +297,8 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
       sel.removeAllRanges();
       sel.addRange(range);
       this._menuOpenedProgramatically = false;
+      this._anchorNodeOffset = null;
+      this._anchorNodeTestValue = null;
     }
 
     this._caretInfo = this._coordSer.getInfo(this._htmlInputElmNode, this._triggerChar);
