@@ -28,7 +28,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   private _triggerCharOffset = -1;
   private _ngInputControl: NgControl;
   private _overlayRef: OverlayRef;
-  private _htmlInputElmNode: HTMLElement;
+  private _htmlInputElmNode: HTMLElement | HTMLInputElement;
   private _selectionEmitter = new EventEmitter();
   private _caretInfo: CaretInfo;
   private _mentionFilteredList: MentionListItemDirective[];
@@ -50,9 +50,26 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   private _templatePortal: TemplatePortal;
 
   get filterKeyword(): string {
+    if (this._htmlInputElmNode.nodeName === 'INPUT') {
+      return this._filterKeywordForInputElement;
+    }
+
+    return this._filterKeywordForContentEditableElement;
+  }
+
+  private get _filterKeywordForContentEditableElement(): string {
     const anchorNodeText = this._caretInfo.anchorNode.nodeValue;
     const keywordLength = this._caretInfo.offset - (this._triggerCharOffset + 1);
     const keyword = anchorNodeText.substr(this._triggerCharOffset + 1, keywordLength);
+    return keyword;
+  }
+
+  private get _filterKeywordForInputElement(): string {
+    const elm = (this._htmlInputElmNode as HTMLInputElement);
+    const elmValue = elm.value;
+    const anchorCharIndex = elmValue.indexOf(this._triggerChar) + 1;
+    const caretOffset = elm.selectionEnd;
+    const keyword = elmValue.substring(anchorCharIndex, caretOffset);
     return keyword;
   }
 
@@ -118,11 +135,31 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     this._allRxjsSubscription.push(subsc);
   }
 
-  registerHtmlInputElmNode(node: HTMLElement) {
+  registerHtmlInputElmNode(node: HTMLElement | HTMLInputElement) {
     this._htmlInputElmNode = node;
   }
 
   openMentionMenu() {
+    if (this._htmlInputElmNode.nodeName === 'INPUT') {
+      this._openMenuForInputElement();
+    } else {
+      this._openMenuForContentEditableElement();
+    }
+  }
+
+  private _openMenuForInputElement() {
+    const elm = (this._htmlInputElmNode as HTMLInputElement);
+    const value = elm.value;
+    const caretOffset = elm.selectionEnd;
+    const preVal = value.substring(0, caretOffset);
+    const postVal = value.substring(caretOffset, value.length);
+    const finalValue = preVal + this._triggerChar + postVal;
+    this._menuOpenedProgramatically = true;
+    this._anchorNodeOffset = caretOffset + this._triggerChar.length;
+    this._ngInputControl.control.setValue(finalValue);
+  }
+
+  private _openMenuForContentEditableElement() {
     this._menuOpenedProgramatically = true;
     const selection = this._doc.getSelection();
 
@@ -227,6 +264,17 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     if (this._triggerCharOffset < 0 || !this._caretInfo) {
       return;
     }
+
+    if (this._htmlInputElmNode.nodeName === 'INPUT') {
+      this._addValueForInputElement(selectedMentionListItemConfig);
+    } else {
+      this._addValueForContentEditableElement(selectedMentionListItemConfig);
+    }
+
+    this._closeOverlay();
+  }
+
+  private _addValueForContentEditableElement(selectedMentionListItemConfig: MentionListItemConfig) {
     const anchorNode: Node = this._caretInfo.anchorNode;
     const anchorNodeText: string = anchorNode.nodeValue;
     const tempElm = this._doc.createElement('div');
@@ -241,11 +289,10 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     preNode.parentNode.insertBefore(insertElm, preNode.nextSibling);
     insertElm.parentNode.insertBefore(postNode, insertElm.nextSibling);
     this._ngInputControl.control.setValue(postNode.parentElement.innerHTML);
-    this._closeOverlay();
-    this._restoreCaretPosition();
+    this._restoreCaretPositionForContentEditableElement();
   }
 
-  private _restoreCaretPosition() {
+  private _restoreCaretPositionForContentEditableElement() {
     const range = this._doc.createRange();
     const sel = this._doc.getSelection();
     const elm = this._htmlInputElmNode.querySelector('[setFocusAfterMe="true"]');
@@ -263,6 +310,27 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     sel.addRange(range);
     elm.removeAttribute('setFocusAfterMe');
     this._htmlInputElmNode.focus();
+  }
+
+  private _addValueForInputElement(selectedMentionListItemConfig: MentionListItemConfig) {
+    const elm = (this._htmlInputElmNode as HTMLInputElement);
+    const elmValue = elm.value;
+    const valueForInsertion = this._selectionCallback(selectedMentionListItemConfig);
+    const preVal = elmValue.substr(0, this._triggerCharOffset);
+    const postVal = elmValue.substr(elm.selectionEnd, elmValue.length);
+    const finalValue = preVal + valueForInsertion + postVal;
+    const offsetForFocus = (preVal + valueForInsertion).length;
+    this._ngInputControl.control.setValue(finalValue);
+    this._caretInfo.offset = offsetForFocus;
+    const offset = this._caretInfo.offset
+    this._restoreCaretForInputElement(offset);
+  }
+
+  private _restoreCaretForInputElement(offset: number) {
+    const elm = this._htmlInputElmNode as HTMLInputElement;
+    elm.focus();
+    elm.setSelectionRange(offset, offset);
+    elm.focus();
   }
 
   private _closeOverlay() {
@@ -288,7 +356,9 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   }
 
   private _setWatcher(val: string) {
-    if (this._menuOpenedProgramatically) {
+    if (this._menuOpenedProgramatically && this._htmlInputElmNode.nodeName === 'INPUT') {
+      this._restoreCaretForInputElement(this._anchorNodeOffset);
+    } else if (this._menuOpenedProgramatically) {
       const elm = this._getElmForProgrammaticTigger();
       const triggerCharIndex = elm.nodeValue.indexOf(this._triggerChar) + 1;
       const range = this._doc.createRange();
@@ -297,10 +367,11 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
       range.collapse();
       sel.removeAllRanges();
       sel.addRange(range);
-      this._menuOpenedProgramatically = false;
-      this._anchorNodeOffset = null;
-      this._anchorNodeTestValue = null;
     }
+
+    this._menuOpenedProgramatically = false;
+    this._anchorNodeOffset = null;
+    this._anchorNodeTestValue = null;
 
     this._caretInfo = this._coordSer.getInfo(this._htmlInputElmNode, this._triggerChar);
     if (!this._caretInfo) {

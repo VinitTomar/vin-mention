@@ -17,7 +17,7 @@ export class MentionInputDirective implements OnInit {
 
   constructor(
     @Optional() @Self() private _ngContol: NgControl,
-    private _elmRef: ElementRef<HTMLElement>
+    private _elmRef: ElementRef<HTMLElement | HTMLInputElement>
   ) {
     if (!this._ngContol) {
       throw ('No control value accessor provided. Please have a look at "https://www.npmjs.com/package/vin-content-editable"');
