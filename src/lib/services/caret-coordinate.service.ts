@@ -47,7 +47,7 @@ export class CaretCoordinateService {
     markerElmWrapper.style.whiteSpace = 'pre-wrap';
     markerElmWrapper.style.position = 'fixed';
     markerElmWrapper.style.visibility = 'hidden';
-    markerElmWrapper.style.overflow = 'hidden';
+    markerElmWrapper.style.overflow = 'auto';
 
     const elementBoundingClient = element.getBoundingClientRect();
     markerElmWrapper.style.top = elementBoundingClient.top + 'px';
@@ -56,10 +56,23 @@ export class CaretCoordinateService {
     markerElmWrapper.textContent = element.value;
     markerElmWrapper.textContent = markerElmWrapper.textContent.replace(/\s/g, ' ');
 
+    if (element.scrollWidth > element.clientWidth) {
+      markerElmWrapper.scrollLeft = element.scrollLeft;
+    }
+
     const range = this._doc.createRange();
     const caretOffset = element.value.indexOf(triggerChar);
     const anchorNode = markerElmWrapper.firstChild;
-    const caretInfo = new CaretInfo(this._calculateCoordinates(range, anchorNode, triggerChar),caretOffset, anchorNode);
+    const caretInfo = new CaretInfo(this._calculateCoordinates(range, anchorNode, triggerChar), caretOffset, anchorNode);
+    
+    const wrapperElmBoundingClient = markerElmWrapper.getBoundingClientRect();
+
+    if (caretInfo.coordinate.x > wrapperElmBoundingClient.right) {
+      caretInfo.coordinate.x = wrapperElmBoundingClient.right
+    } else if (caretInfo.coordinate.x < wrapperElmBoundingClient.left) {
+      caretInfo.coordinate.x = wrapperElmBoundingClient.left;
+    }
+
     markerElmWrapper.remove();
     return caretInfo;
   }
