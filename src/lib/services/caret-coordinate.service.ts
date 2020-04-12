@@ -12,7 +12,7 @@ export class CaretCoordinateService {
   private _doc: Document
 
   getInfo(element: HTMLElement | HTMLInputElement, triggerChar: string): CaretInfo {
-    if (element.nodeName === 'INPUT') {
+    if (element.nodeName === 'INPUT' || element.nodeName === 'TEXTAREA') {
       return this._coordinateForInputElement(element as HTMLInputElement, triggerChar);
     }
 
@@ -54,10 +54,20 @@ export class CaretCoordinateService {
     markerElmWrapper.style.left = elementBoundingClient.left + 'px';
 
     markerElmWrapper.textContent = element.value;
-    markerElmWrapper.textContent = markerElmWrapper.textContent.replace(/\s/g, ' ');
+    if (element.nodeName === 'INPUT') {
+      markerElmWrapper.textContent = markerElmWrapper.textContent.replace(/\s/g, ' ');
+    }
+
+    if (element.nodeName === 'TEXTAREA') {
+      markerElmWrapper.style.wordWrap = 'break-word';
+    }
 
     if (element.scrollWidth > element.clientWidth) {
       markerElmWrapper.scrollLeft = element.scrollLeft;
+    }
+
+    if (element.scrollHeight > element.clientHeight) {
+      markerElmWrapper.scrollTop = element.scrollTop;
     }
 
     const range = this._doc.createRange();

@@ -51,7 +51,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   private _templatePortal: TemplatePortal;
 
   get filterKeyword(): string {
-    if (this._htmlInputElmNode.nodeName === 'INPUT') {
+    if (this._htmlInputElmNode.nodeName === 'INPUT' || this._htmlInputElmNode.nodeName === 'TEXTAREA') {
       return this._filterKeywordForInputElement;
     }
 
@@ -141,7 +141,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   }
 
   openMentionMenu() {
-    if (this._htmlInputElmNode.nodeName === 'INPUT') {
+    if (this._htmlInputElmNode.nodeName === 'INPUT' || this._htmlInputElmNode.nodeName === 'TEXTAREA') {
       this._openMenuForInputElement();
     } else {
       this._openMenuForContentEditableElement();
@@ -268,7 +268,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
       return;
     }
 
-    if (this._htmlInputElmNode.nodeName === 'INPUT') {
+    if (this._htmlInputElmNode.nodeName === 'INPUT' || this._htmlInputElmNode.nodeName === 'TEXTAREA') {
       this._addValueForInputElement(selectedMentionListItemConfig);
     } else {
       this._addValueForContentEditableElement(selectedMentionListItemConfig);
@@ -362,7 +362,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   }
 
   private _setWatcher(val: string) {
-    if (this._menuOpenedProgramatically && this._htmlInputElmNode.nodeName === 'INPUT') {
+    if (this._menuOpenedProgramatically && (this._htmlInputElmNode.nodeName === 'INPUT' || this._htmlInputElmNode.nodeName === 'TEXTAREA')) {
       this._restoreCaretForInputElement(this._anchorNodeOffset, this._elmScrollLeft);
     } else if (this._menuOpenedProgramatically) {
       const elm = this._getElmForProgrammaticTigger();
