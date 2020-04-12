@@ -108,7 +108,11 @@ export class CaretCoordinateService {
     range.insertNode(markerElm);
     const boundingClient: DOMRect = markerElm.getBoundingClientRect() as DOMRect;
     markerElm.remove();
-    anchorNode.normalize();
+    if (anchorNode.nodeType === Node.TEXT_NODE) {
+      anchorNode.parentElement.normalize();
+    } else {
+      anchorNode.normalize();
+    }
 
     range.setStart(anchorNode, caretOffset);
     range.collapse(true);
