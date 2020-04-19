@@ -1,7 +1,7 @@
 # VinMention
 
 ## Description
-There are many libraries for mentions or tributes for core javascript imeplementation. But there is no library for angular. For this purpose I have created this library so that developers can use it in their project without any issue.
+There are many libraries for mentions or tributes for core javascript imeplementation. But there is no library for angular which can properyly work with `angular forms`. For this purpose I have created this library so that developers can use it in their project without any issue.
 
 ## Installation
 
@@ -16,7 +16,7 @@ npm install --save vin-mention.
 
 2. Provide the mention list menu as the content of the `vin-mention` component. eg:
 ```
-<vin-mention #mymentions="vinMention" [selectionCallback]="selCall">
+<vin-mention #mymentions="vinMention" [config]="selCall">
     <mat-card>
       <mat-action-list>
         <button mat-list-item *ngFor="let item of mentionList;" [mentionListItem]="item">
@@ -25,9 +25,10 @@ npm install --save vin-mention.
     </mat-card>
   </vin-mention>
 ```
-You can desing the menu how ever you want. Just take care or using `mentionListItem` with an input value of type `MentionListItemConfig`.
+You can design the menu how ever you want. Just take care or using `mentionListItem` with an input value of type `MentionListItemConfig`.
 
-DO NOT FORGET TO PROVIDE selectionCallback AS INPUT TO THE `vin-metion`, WITH THE FOLLWOING SIGNATURE
+DO NOT FORGET TO PROVIDE `selectionCallback` AS CONFIG TO THE `vin-metion`, WITH THE FOLLWOING SIGNATURE. 
+SelectionCallback function will be call when user have selected an item from the list. The returned value from the callback will be inserted at the place of mention.
 
 ```
 (selectedItem: MentionListItemConfig) => string;
@@ -46,7 +47,7 @@ class MentionConfig {
 }
 ```
 
-2. Please use with `vin-content-editable` package for better support. However you can use your own controlvalueaccessor implementation for content editalbe element.
+2. If you are using `vin-mention` wiht contenteditable element, please use with `vin-content-editable` package for better support. However you can use your own controlvalueaccessor implementation for content editalbe element.
 
 ## Example
 Here is [demo](https://stackblitz.com/edit/vin-mention-demo).
