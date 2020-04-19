@@ -11,4 +11,4 @@ export * from './lib/directives/mention-list-item.directive'
 
 export * from './lib/services/caret-coordinate.service';
 
-export * from './lib/models/mention-list-item-config.model';
+export * from './lib/models/';
