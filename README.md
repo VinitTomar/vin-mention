@@ -14,9 +14,19 @@ npm install --save vin-mention.
 <div vinContentEditable="innerHTML" [formControl]="fc" matContentEditableInput [mentionInput]="mymentions" placeholder="content editable"></div>
 ```
 
-2. Provide the mention list menu as the content of the `vin-mention` component. eg:
+2. Add MentionConfig
 ```
-<vin-mention #mymentions="vinMention" [config]="selCall">
+this.mentionConfig = {
+  filterListItems: true,
+  insertOnSpace: true,
+  triggerChar: '@',
+  selectionCallback: this.githubSelCall
+}
+```
+
+3. Provide the mention list menu as the content of the `vin-mention` component. eg:
+```
+<vin-mention #mymentions="vinMention" [config]="mentionConfig">
     <mat-card>
       <mat-action-list>
         <button mat-list-item *ngFor="let item of mentionList;" [mentionListItem]="item">
