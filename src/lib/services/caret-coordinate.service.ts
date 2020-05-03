@@ -74,7 +74,7 @@ export class CaretCoordinateService {
     const caretOffset = element.value.indexOf(triggerChar);
     const anchorNode = markerElmWrapper.firstChild;
     const caretInfo = new CaretInfo(this._calculateCoordinates(range, anchorNode, triggerChar), caretOffset, anchorNode);
-    
+
     const wrapperElmBoundingClient = markerElmWrapper.getBoundingClientRect();
 
     if (caretInfo.coordinate.x > wrapperElmBoundingClient.right) {
@@ -91,14 +91,30 @@ export class CaretCoordinateService {
     let selection = this._doc.getSelection();
     let anchorNode = selection.anchorNode;
     const range = selection.getRangeAt(0);
-    if (anchorNode && anchorNode.nodeValue && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
+    if (anchorNode && this._proceedForCaretInfo(element, triggerChar)) {
       const caretOffset = range.endOffset;
-      return new CaretInfo(this._calculateCoordinates(range, anchorNode, triggerChar),caretOffset,anchorNode,);
+      return new CaretInfo(this._calculateCoordinates(range, anchorNode, triggerChar), caretOffset, anchorNode);
     }
     return null;
   }
 
-  private _calculateCoordinates(range: Range, anchorNode:Node , triggerChar: string): DOMRect {
+  private _proceedForCaretInfo(element: HTMLElement, triggerChar: string): boolean {
+    let selection = this._doc.getSelection();
+    let anchorNode = selection.anchorNode;
+    const range = selection.getRangeAt(0);
+
+    if (element === range.commonAncestorContainer.parentNode && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
+      return true;
+    }
+
+    if (element === range.commonAncestorContainer.parentNode.parentNode && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private _calculateCoordinates(range: Range, anchorNode: Node, triggerChar: string): DOMRect {
     const triggerCharIndex = anchorNode.nodeValue.lastIndexOf(triggerChar);
     const caretOffset = range.endOffset;
     const markerElm = this._doc.createElement('span');

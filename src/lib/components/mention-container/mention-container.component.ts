@@ -299,7 +299,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     const tempElm = this._doc.createElement('div');
     tempElm.innerHTML = this._selectionCallback(selectedMentionListItemConfig);
     const insertElm: HTMLElement = tempElm.firstChild as HTMLElement;
-    insertElm.setAttribute('setFocusAfterMe', 'true');
+    insertElm.setAttribute('setfocusafterme', 'true');
     const preVal = anchorNodeText.substr(0, this._triggerCharOffset);
     const postVal = anchorNodeText.substr(this._caretInfo.offset, anchorNodeText.length);
     const preNode = this._doc.createTextNode(preVal);
@@ -312,23 +312,25 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   }
 
   private _restoreCaretPositionForContentEditableElement() {
-    const range = this._doc.createRange();
-    const sel = this._doc.getSelection();
-    const elm = this._htmlInputElmNode.querySelector('[setFocusAfterMe="true"]');
-    const elmNextSibling = elm.nextSibling;
+    setTimeout(() => {
+      const range = this._doc.createRange();
+      const sel = this._doc.getSelection();
+      const elm = this._doc.querySelector('[setfocusafterme="true"]');
+      const elmNextSibling = elm.nextSibling;
 
-    if (elmNextSibling && elmNextSibling.nodeType === Node.TEXT_NODE) {
-      range.setStart(elmNextSibling, 0);
-      range.collapse(true);
-    } else {
-      range.setStartAfter(elm);
-      range.collapse(true);
-    }
+      if (elmNextSibling && elmNextSibling.nodeType === Node.TEXT_NODE) {
+        range.setStart(elmNextSibling, 0);
+        range.collapse(true);
+      } else {
+        range.setStartAfter(elm);
+        range.collapse(true);
+      }
 
-    sel.removeAllRanges();
-    sel.addRange(range);
-    elm.removeAttribute('setFocusAfterMe');
-    this._htmlInputElmNode.focus();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      elm.removeAttribute('setfocusafterme');
+      this._htmlInputElmNode.focus();
+    }, 0);
   }
 
   private _addValueForInputElement(selectedMentionListItemConfig: MentionListItemConfig) {
@@ -387,7 +389,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
       });
     }
 
-    if (selectedElm.nodeType === 1) {
+    if (selectedElm && selectedElm.nodeType === 1) {
       const childNodes = selectedElm.childNodes;
       const nodeArr: Array<ChildNode> = Array.prototype.slice.call(childNodes);
       selectedElm = nodeArr.find(node => {
