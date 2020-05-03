@@ -91,7 +91,7 @@ export class CaretCoordinateService {
     let selection = this._doc.getSelection();
     let anchorNode = selection.anchorNode;
     const range = selection.getRangeAt(0);
-    if (element === range.commonAncestorContainer.parentNode && anchorNode && anchorNode.nodeValue && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
+    if (anchorNode && anchorNode.nodeValue && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
       const caretOffset = range.endOffset;
       return new CaretInfo(this._calculateCoordinates(range, anchorNode, triggerChar),caretOffset,anchorNode,);
     }

@@ -38,7 +38,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
   private _menuOpenedProgramatically = false;
   private _anchorNodeOffset: number = null;
   private _elmScrollLeft: number = null;
-  private _anchorNodeTestValue: string = null;
+  private _anchorNodeTextValue: string = null;
 
   private _allRxjsSubscription: Array<Subscription> = [];
 
@@ -175,31 +175,47 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
         else
           this._htmlInputElmNode.appendChild(textNode);
       }
-       else {
+      else {
         this._htmlInputElmNode.prepend(textNode);
       }
 
-      this._anchorNodeTestValue = textNode.wholeText;
+      this._anchorNodeTextValue = textNode.wholeText;
       this._anchorNodeOffset = textNode.nodeValue.indexOf(this._triggerChar) + 1;
 
-    } else if (selection.anchorNode.parentElement === this._htmlInputElmNode) {
+    } else if (selection.anchorNode && (
+      selection.anchorNode.parentElement === this._htmlInputElmNode || selection.anchorNode.parentElement.nodeType !== Node.TEXT_NODE
+    )) {
       this._htmlInputElmNode.normalize();
-      const textNode = selection.anchorNode.nodeType === Node.TEXT_NODE ? selection.anchorNode : this._doc.createTextNode('');
-      const nodeText = textNode.nodeValue;
-      const offset = selection.anchorOffset;
-      const preText = nodeText.slice(0, offset);
-      const postText = nodeText.slice(offset, nodeText.length);
-      textNode.nodeValue = preText + this._triggerChar + postText;
 
-      this._anchorNodeOffset = offset + 1;
-      this._anchorNodeTestValue = textNode.nodeValue;
+      if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
+        const textNode = selection.anchorNode
+        const nodeText = textNode.nodeValue;
+        const offset = selection.anchorOffset;
+        const preText = nodeText.slice(0, offset);
+        const postText = nodeText.slice(offset, nodeText.length);
+        textNode.nodeValue = preText + this._triggerChar + postText;
 
+        this._anchorNodeOffset = offset + 1;
+        this._anchorNodeTextValue = textNode.nodeValue;
+
+      } else {
+        const textNode = this._doc.createTextNode(this._triggerChar);
+        const anchorNode = (selection.anchorNode as HTMLDivElement);
+
+        if (anchorNode.innerText === '\n') {
+          anchorNode.innerText = '';
+        }
+
+        selection.anchorNode.appendChild(textNode);
+        this._anchorNodeOffset = 1;
+        this._anchorNodeTextValue = textNode.nodeValue;
+      }
     } else {
       const textNode = this._doc.createTextNode(this._triggerChar);
       this._htmlInputElmNode.appendChild(textNode);
-      
+
       this._anchorNodeOffset = null;
-      this._anchorNodeTestValue = null;
+      this._anchorNodeTextValue = null;
     }
 
     this._ngInputControl.control.setValue(this._htmlInputElmNode.innerHTML);
@@ -291,7 +307,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     anchorNode.parentNode.replaceChild(preNode, anchorNode);
     preNode.parentNode.insertBefore(insertElm, preNode.nextSibling);
     insertElm.parentNode.insertBefore(postNode, insertElm.nextSibling);
-    this._ngInputControl.control.setValue(postNode.parentElement.innerHTML);
+    this._ngInputControl.control.setValue(this._htmlInputElmNode.innerHTML);
     this._restoreCaretPositionForContentEditableElement();
   }
 
@@ -351,14 +367,35 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
     this._focusedMentionItemIndex = -1;
   }
 
-  private _getElmForProgrammaticTigger(): ChildNode {
-    if (this._anchorNodeOffset !== null && this._anchorNodeTestValue !== null) {
+  private _getElmForProgrammaticTigger(): ChildNode | HTMLElement {
+    let selectedElm: ChildNode;
+    if (this._anchorNodeOffset !== null && this._anchorNodeTextValue !== null) {
       const childNodes = this._htmlInputElmNode.childNodes;
-      const nodeArr:Array<ChildNode> = Array.prototype.slice.call(childNodes);
-      return nodeArr.find(node => node.nodeValue === this._anchorNodeTestValue);
+      const nodeArr: Array<ChildNode> = Array.prototype.slice.call(childNodes);
+
+      selectedElm = nodeArr.find(node => {
+        if (node.nodeType === 1) {
+          const childNodes = node.childNodes;
+          const nodeArr: Array<ChildNode> = Array.prototype.slice.call(childNodes);
+          const selNode = nodeArr.find(node => {
+            return node.nodeValue === this._anchorNodeTextValue;
+          });
+
+          return !!selNode;
+        }
+        return node.nodeValue === this._anchorNodeTextValue;
+      });
     }
 
-    return this._htmlInputElmNode.lastChild;
+    if (selectedElm.nodeType === 1) {
+      const childNodes = selectedElm.childNodes;
+      const nodeArr: Array<ChildNode> = Array.prototype.slice.call(childNodes);
+      selectedElm = nodeArr.find(node => {
+        return node.nodeValue === this._anchorNodeTextValue;
+      });
+    }
+
+    return selectedElm || this._htmlInputElmNode.lastChild;
   }
 
   private _setWatcher(val: string) {
@@ -377,7 +414,7 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
 
     this._menuOpenedProgramatically = false;
     this._anchorNodeOffset = null;
-    this._anchorNodeTestValue = null;
+    this._anchorNodeTextValue = null;
     this._elmScrollLeft = null;
 
     this._caretInfo = this._coordSer.getInfo(this._htmlInputElmNode, this._triggerChar);
