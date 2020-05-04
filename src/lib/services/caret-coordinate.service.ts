@@ -89,6 +89,11 @@ export class CaretCoordinateService {
 
   private _coordinateForContentEditableElement(element: HTMLElement, triggerChar: string): CaretInfo {
     let selection = this._doc.getSelection();
+
+    if (selection.rangeCount === 0) {
+      return null;
+    }
+
     let anchorNode = selection.anchorNode;
     const range = selection.getRangeAt(0);
     if (anchorNode && this._proceedForCaretInfo(element, triggerChar)) {
