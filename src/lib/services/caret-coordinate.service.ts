@@ -103,6 +103,10 @@ export class CaretCoordinateService {
     let anchorNode = selection.anchorNode;
     const range = selection.getRangeAt(0);
 
+    if (!anchorNode.nodeValue) {
+      return false;
+    }
+
     if (element === range.commonAncestorContainer.parentNode && anchorNode.nodeValue.lastIndexOf(triggerChar) !== -1) {
       return true;
     }
