@@ -163,7 +163,13 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
 
   private _openMenuForContentEditableElement() {
     this._menuOpenedProgramatically = true;
-    const selection = this._doc.getSelection();
+    let selection = this._doc.getSelection();
+
+    if (selection.anchorNode == null) {
+      this._htmlInputElmNode.focus();
+    } else if (selection.anchorNode !== this._htmlInputElmNode && selection.anchorNode.parentNode !== this._htmlInputElmNode) {
+      this._htmlInputElmNode.focus();
+    }
 
     if (selection.anchorNode === this._htmlInputElmNode) {
       const textNode = this._doc.createTextNode(this._triggerChar);
