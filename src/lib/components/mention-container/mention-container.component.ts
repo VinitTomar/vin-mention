@@ -205,16 +205,24 @@ export class MentionContainerComponent implements OnInit, AfterContentInit, OnDe
         this._anchorNodeTextValue = textNode.nodeValue;
 
       } else {
-        const textNode = this._doc.createTextNode(this._triggerChar);
-        const anchorNode = (selection.anchorNode as HTMLDivElement);
+        if ((selection.anchorNode as HTMLElement).getAttribute('contenteditable') === 'false') {
+          const textNode = this._doc.createTextNode(this._triggerChar);
+          this._htmlInputElmNode.appendChild(textNode);
 
-        if (anchorNode.innerText === '\n') {
-          anchorNode.innerText = '';
+          this._anchorNodeOffset = null;
+          this._anchorNodeTextValue = null;
+        } else {
+          const textNode = this._doc.createTextNode(this._triggerChar);
+          const anchorNode = (selection.anchorNode as HTMLDivElement);
+
+          if (anchorNode.innerText === '\n') {
+            anchorNode.innerText = '';
+          }
+
+          selection.anchorNode.appendChild(textNode);
+          this._anchorNodeOffset = 1;
+          this._anchorNodeTextValue = textNode.nodeValue;
         }
-
-        selection.anchorNode.appendChild(textNode);
-        this._anchorNodeOffset = 1;
-        this._anchorNodeTextValue = textNode.nodeValue;
       }
     } else {
       const textNode = this._doc.createTextNode(this._triggerChar);
