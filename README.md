@@ -7,6 +7,8 @@ There are many libraries for mentions or tributes for core javascript imeplement
 
 npm install --save vin-mention.
 
+For Angular 10 use version 3.0.x
+
 ## Usage
 
 1. Use `mentionInput` directive at content editable element. eg:

@@ -1,9 +1,9 @@
 import { Component, OnInit, EventEmitter, ViewChild, TemplateRef, ViewContainerRef, QueryList, ContentChildren, AfterContentInit, Input, Inject, OnDestroy } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { NgControl } from '@angular/forms';
-import { OverlayRef, Overlay, GlobalPositionStrategy, OverlayConfig, RepositionScrollStrategy } from '@angular/cdk/overlay';
+import { OverlayRef, Overlay, GlobalPositionStrategy, OverlayConfig } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
-import { ESCAPE, UP_ARROW, DOWN_ARROW, ENTER, SPACE, AT_SIGN } from '@angular/cdk/keycodes';
+import { ESCAPE, UP_ARROW, DOWN_ARROW, ENTER, SPACE } from '@angular/cdk/keycodes';
 
 import { merge, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
